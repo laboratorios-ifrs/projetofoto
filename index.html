@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner IFRS - Laboratório</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h2 { color: #333; }
+        .camera-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 0 auto 15px auto;
+            max-width: 100%;
+            width: 400px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        video { width: 100%; display: block; }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+        button:active { background-color: #218838; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        #status {
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            max-width: 370px;
+            margin: 0 auto;
+            font-size: 16px;
+            color: #333;
+            min-height: 50px;
+            word-wrap: break-word;
+        }
+        .loading { color: #0056b3; font-weight: bold; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Scanner de Patrimônio</h2>
+    
+    <div class="camera-container">
+        <video id="video" autoplay playsinline></video>
+    </div>
+    
+    <button id="btn-capturar">Capturar Etiqueta</button>
+    
+    <canvas id="canvas" style="display:none;"></canvas>
+    
+    <div id="status">Aguardando captura...</div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const statusDiv = document.getElementById('status');
+        const btnCapturar = document.getElementById('btn-capturar');
+
+        // Solicita a câmera traseira do smartphone
+        const constraints = {
+            video: { facingMode: "environment" } 
+        };
+
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => { 
+                video.srcObject = stream; 
+            })
+            .catch(err => {
+                statusDiv.innerHTML
