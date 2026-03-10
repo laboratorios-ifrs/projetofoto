@@ -21,8 +21,17 @@
             max-width: 100%;
             width: 400px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            /* Define uma altura mínima para não ficar um quadrado pequeno se falhar */
+            min-height: 250px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        video { width: 100%; display: block; }
+        video { 
+            width: 100%; 
+            display: block; 
+            background-color: #000;
+        }
         button {
             background-color: #28a745;
             color: white;
@@ -59,29 +68,87 @@
     <h2>Scanner de Patrimônio</h2>
     
     <div class="camera-container">
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
     </div>
     
     <button id="btn-capturar">Capturar Etiqueta</button>
     
     <canvas id="canvas" style="display:none;"></canvas>
     
-    <div id="status">Aguardando captura...</div>
+    <div id="status">Iniciando câmera...</div>
 
     <script>
+        // Pega os elementos
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const statusDiv = document.getElementById('status');
         const btnCapturar = document.getElementById('btn-capturar');
 
-        // Solicita a câmera traseira do smartphone
-        const constraints = {
-            video: { facingMode: "environment" } 
-        };
+        // Verificação extra de segurança para navegadores
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            
+            // Tenta forçar a câmera traseira
+            const constraints = { video: { facingMode: "environment" } };
+            
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    // Comando crucial para forçar o vídeo a rodar no celular
+                    video.play(); 
+                    statusDiv.innerHTML = "Câmera ativada! Aponte para a etiqueta.";
+                })
+                .catch(function(err) {
+                    console.error("Erro na câmera:", err);
+                    statusDiv.innerHTML = "<span class='error'>Erro: Permita o acesso à câmera nas configurações do navegador (ícone de opções perto da URL).</span>";
+                    alert("O navegador bloqueou a câmera. Verifique as permissões do site.");
+                });
+        } else {
+            statusDiv.innerHTML = "<span class='error'>Seu navegador não suporta acesso à câmera por este link.</span>";
+        }
 
-        navigator.mediaDevices.getUserMedia(constraints)
-            .then(stream => { 
-                video.srcObject = stream; 
+        // Função de clique no botão
+        btnCapturar.addEventListener('click', () => {
+            // Verifica se o vídeo realmente está rodando antes de tentar capturar
+            if (!video.videoWidth) {
+                alert("Aguarde a câmera carregar ou verifique as permissões.");
+                return;
+            }
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/png');
+            enviarParaGoogle(imageData);
+        });
+
+        // Envio para a planilha
+        function enviarParaGoogle(base64Image) {
+            statusDiv.innerHTML = "<span class='loading'>Enviando imagem e processando OCR...</span>";
+            btnCapturar.disabled = true;
+            btnCapturar.innerText = "Processando...";
+
+            // Sua URL do Google Apps Script
+            const urlApp = "https://script.google.com/macros/s/AKfycbzqohD6y8lVWu3SENbhp-B9UvUjgf-UEeunfxytivk0nAgxP3Lg1HbSR83Vf8q0fCk6/exec";
+
+            fetch(urlApp, {
+                method: 'POST',
+                body: JSON.stringify({ image: base64Image })
+            })
+            .then(response => response.text())
+            .then(texto => {
+                statusDiv.innerHTML = "<span class='success'><strong>Concluído:</strong><br>" + texto + "</span>";
+                btnCapturar.disabled = false;
+                btnCapturar.innerText = "Capturar Nova Etiqueta";
             })
             .catch(err => {
-                statusDiv.innerHTML
+                statusDiv.innerHTML = "<span class='error'>Erro ao comunicar com o Google Sheets.</span>";
+                console.error("Erro no Fetch:", err);
+                btnCapturar.disabled = false;
+                btnCapturar.innerText = "Tentar Novamente";
+            });
+        }
+    </script>
+</body>
+</html>
